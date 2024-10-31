@@ -2,7 +2,7 @@
 #include "Ultrasonic.h"
 
 // Inicializando o LCD com o endereço I2C e as dimensões (16 colunas e 2 linhas)
-LiquidCrystal_I2C lcd(0x27, 16, 2);  // Verifique se o endereço I2C do seu módulo é 0x27 ou 0x3F
+LiquidCrystal_I2C lcd(0x27, 20, 4);  // Verifique se o endereço I2C do seu módulo é 0x27 ou 0x3F
 
 Ultrasonic ultra1(6, 7);
 Ultrasonic ultra2(8, 9);
@@ -209,7 +209,7 @@ void processActivation() {
   unsigned long currentActivationTime = millis();
   int pointsGained = 10;
 
-  if ((currentActivationTime - lastActivationTime <= bonusWindow) || (level == 4)) {
+  if (currentActivationTime - lastActivationTime <= bonusWindow) {
     pointsGained += 10;
   }
 
@@ -233,8 +233,6 @@ void checkLevelUp() {
 }
 
 void levelUp(String levelName, int newLevel, unsigned long newTempo, int newActiveSensors, int nextScoreThreshold) {
-  inicio = millis();
-
   level = newLevel;
   tempo = newTempo;
   activeSensors = newActiveSensors;
@@ -244,7 +242,7 @@ void levelUp(String levelName, int newLevel, unsigned long newTempo, int newActi
   lcd.print("Level: ");
   lcd.print(levelName);
   tone(buzzerPin, 1000);
-  delay(500);
+  delay(1500);
   noTone(buzzerPin);
 
   if (nextScoreThreshold > 0) {
@@ -256,6 +254,11 @@ void levelUp(String levelName, int newLevel, unsigned long newTempo, int newActi
 
 void endGame() {
   inicioJogo = false;
+
+  Serial.print("SCORE:");
+  Serial.println(score);
+  Serial.println("END");
+
   noTone(buzzerPin);
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -278,7 +281,6 @@ void endGame() {
     digitalWrite(led4, HIGH);
     delay(200);
   }
-
   noTone(buzzerPin);
 
   digitalWrite(led1, LOW);
