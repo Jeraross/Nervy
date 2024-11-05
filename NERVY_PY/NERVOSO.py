@@ -2,18 +2,22 @@ import serial
 import time
 import csv
 import tkinter as tk
-from tkinter import ttk, simpledialog, messagebox
+from tkinter import simpledialog, messagebox
+from PIL import Image, ImageTk  # Biblioteca para carregar a imagem PNG
 import threading
 
 # Configuração da porta serial e arquivo CSV
-arduino_port = "COM10"  # Troque para a porta correta do seu Arduino
+arduino_port = "COM7"  # Troque para a porta correta do seu Arduino
 baud = 9600
 ser = serial.Serial(arduino_port, baud)
 csv_file = "scores.csv"
 update_interval = 5000  # Intervalo de atualização em milissegundos
 time.sleep(2)  # Tempo para estabelecer a conexão com a porta serial
 
-# Função para receber pontuação do Arduino
+# Variável global para o dia atual
+dia = 1
+
+# Funções de leaderboard e Arduino (não alteradas para essa modificação)
 def receive_score_from_arduino():
     score = None
     while True:
@@ -25,16 +29,15 @@ def receive_score_from_arduino():
             break
     return score
 
-# Função para salvar no placar
-def save_to_leaderboard(name, score):
+def save_to_leaderboard(name, score, day):
     with open(csv_file, mode="a", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow([name, score])
-    print(f"{name} com {score} pontos foi adicionado ao placar.")
+        writer.writerow([name, score, day])
+    print(f"{name} com {score} pontos foi adicionado ao placar para o dia {day}.")
 
-# Função para ler o placar do arquivo CSV
-def read_leaderboard():
-    scores = []
+def read_leaderboard(day=None):
+    scores_today = []
+    scores_all_time = []
     try:
         with open(csv_file, newline='') as file:
             reader = csv.reader(file)
@@ -42,37 +45,50 @@ def read_leaderboard():
                 try:
                     name = row[0]
                     score = int(row[1])
-                    scores.append((name, score))
+                    score_day = int(row[2])
+                    if score_day == day:
+                        scores_today.append((name, score))
+                    scores_all_time.append((name, score))
                 except (ValueError, IndexError):
                     continue
-        scores.sort(key=lambda x: x[1], reverse=True)
-        return scores[:10]
+        scores_today.sort(key=lambda x: x[1], reverse=True)
+        scores_all_time.sort(key=lambda x: x[1], reverse=True)
+        return scores_today[:10], scores_all_time[:10]
     except FileNotFoundError:
-        return []
+        return [], []
 
-# Função para atualizar o placar na interface
-def update_leaderboard():
-    scores = read_leaderboard()
-    leaderboard_tree.delete(*leaderboard_tree.get_children())
-    for name, score in scores:
-        leaderboard_tree.insert("", "end", values=(name, score))
+def update_leaderboards():
+    scores_today, scores_all_time = read_leaderboard(dia)
+    for label, (name, score) in zip(today_name_labels, scores_today):
+        label.config(text=name)
+    for label, (name, score) in zip(today_score_labels, scores_today):
+        label.config(text=score)
+    for label in today_name_labels[len(scores_today):]:
+        label.config(text="")
+    for label in today_score_labels[len(scores_today):]:
+        label.config(text="")
+    for label, (name, score) in zip(all_time_name_labels, scores_all_time):
+        label.config(text=name)
+    for label, (name, score) in zip(all_time_score_labels, scores_all_time):
+        label.config(text=score)
+    for label in all_time_name_labels[len(scores_all_time):]:
+        label.config(text="")
+    for label in all_time_score_labels[len(scores_all_time):]:
+        label.config(text="")
 
-# Loop de atualização do placar
 def refresh_loop():
     while True:
-        update_leaderboard()
+        update_leaderboards()
         time.sleep(update_interval / 1000)
 
-# Função para solicitar o nome do jogador no thread principal
 def ask_player_name(score):
     player_name = simpledialog.askstring("Nome do Jogador", "Digite o nome do jogador (3 letras):", parent=root)
     if player_name:
         player_name = player_name.upper()[:3]
-        save_to_leaderboard(player_name, score)
+        save_to_leaderboard(player_name, score, dia)
     else:
         messagebox.showwarning("Aviso", "Nome do jogador não fornecido. A pontuação não será salva.")
 
-# Loop principal que aguarda pontuações do Arduino
 def receive_scores_loop():
     while True:
         score = receive_score_from_arduino()
@@ -82,34 +98,66 @@ def receive_scores_loop():
 # Interface gráfica do leaderboard
 root = tk.Tk()
 root.title("Leaderboard")
-root.geometry("400x500")
-root.configure(bg="#1c1c1c")
+root.attributes("-fullscreen", True)
+root.configure(bg="#000230")
 
-frame = tk.Frame(root, bg="#2a2a2a", bd=10)
-frame.pack(pady=20)
+# Frame principal com os dois leaderboards
+frame = tk.Frame(root, bg="#000230", bd=10)
+frame.pack(expand=True)
 
-title = tk.Label(frame, text="NERVOSOS", font=("Press Start 2P", 24), bg="#2a2a2a", fg="#ffcc00")
-title.pack(pady=10)
+# Carregar a imagem do título
+image_path = "nervosinhos.png"  # Caminho para sua imagem PNG
+title_image = Image.open(image_path)
+title_image = title_image.resize((800, 200), Image.LANCZOS)  # Redimensiona a imagem conforme necessário
+title_photo = ImageTk.PhotoImage(title_image)
 
-columns = ("Nome", "Pontuação")
-leaderboard_tree = ttk.Treeview(frame, columns=columns, show="headings", height=10)
+# Label que exibe a imagem do título
+title_label = tk.Label(frame, image=title_photo, bg="#000230")
+title_label.image = title_photo  # Referência para evitar coleta de lixo da imagem
+title_label.pack(pady=20)
 
-style = ttk.Style()
-style.configure("Treeview",
-                background="#2a2a2a",
-                foreground="white",
-                rowheight=30,
-                fieldbackground="#2a2a2a")
+# Configurações para as listas de leaderboard
+today_name_labels, today_score_labels = [], []
+all_time_name_labels, all_time_score_labels = [], []
 
-leaderboard_tree.heading("Nome", text="Nome", anchor="center")
-leaderboard_tree.heading("Pontuação", text="Pontuação", anchor="center")
-leaderboard_tree.pack(fill="both", expand=True)
+# Leaderboard "TOP DIARIOS"
+today_frame = tk.Frame(frame, bg="#000230")
+today_frame.pack(side="left", padx=40)
 
-# Thread para atualização do placar
+today_label = tk.Label(today_frame, text="TOP DIARIOS", font=("Press Start 2P", 24), bg="#000230", fg="#fc4342")
+today_label.grid(row=0, column=0, columnspan=2, pady=10)
+
+for i in range(10):
+    name_label = tk.Label(today_frame, text="", font=("Press Start 2P", 14), bg="#000230", fg="white", anchor="w")
+    score_label = tk.Label(today_frame, text="", font=("Press Start 2P", 14), bg="#000230", fg="white", anchor="e")
+    name_label.grid(row=i + 1, column=0, sticky="w", padx=(10, 5), pady=2)
+    score_label.grid(row=i + 1, column=1, sticky="e", padx=(5, 10), pady=2)
+    today_name_labels.append(name_label)
+    today_score_labels.append(score_label)
+
+# Leaderboard "TOP GLOBAIS"
+all_time_frame = tk.Frame(frame, bg="#000230")
+all_time_frame.pack(side="right", padx=40)
+
+all_time_label = tk.Label(all_time_frame, text="TOP GLOBAIS", font=("Press Start 2P", 24), bg="#000230", fg="#f03211")
+all_time_label.grid(row=0, column=0, columnspan=2, pady=10)
+
+for i in range(10):
+    name_label = tk.Label(all_time_frame, text="", font=("Press Start 2P", 14), bg="#000230", fg="white", anchor="w")
+    score_label = tk.Label(all_time_frame, text="", font=("Press Start 2P", 14), bg="#000230", fg="white", anchor="e")
+    name_label.grid(row=i + 1, column=0, sticky="w", padx=(10, 5), pady=2)
+    score_label.grid(row=i + 1, column=1, sticky="e", padx=(5, 10), pady=2)
+    all_time_name_labels.append(name_label)
+    all_time_score_labels.append(score_label)
+
+# Botão para sair do modo de tela cheia
+exit_button = tk.Button(root, text="Sair", font=("Press Start 2P", 12), bg="#ff4040", fg="white", command=root.destroy)
+exit_button.place(relx=0.98, rely=0.02, anchor="ne")
+
+# Threads para atualizar leaderboard e receber pontuações
 refresh_thread = threading.Thread(target=refresh_loop, daemon=True)
 refresh_thread.start()
 
-# Thread para receber pontuações do Arduino
 receive_scores_thread = threading.Thread(target=receive_scores_loop, daemon=True)
 receive_scores_thread.start()
 
