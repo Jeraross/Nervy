@@ -45,18 +45,16 @@ def read_leaderboard(day=None):
 
 def update_leaderboards():
     scores_today, scores_all_time = read_leaderboard(dia)
-    for label, (name, score) in zip(today_name_labels, scores_today):
-        label.config(text=name)
-    for label, (name, score) in zip(today_score_labels, scores_today):
-        label.config(text=score)
+    for i, (name, score) in enumerate(scores_today):
+        today_name_labels[i].config(text=f"{i+1}. {name}")
+        today_score_labels[i].config(text=score)
     for label in today_name_labels[len(scores_today):]:
         label.config(text="")
     for label in today_score_labels[len(scores_today):]:
         label.config(text="")
-    for label, (name, score) in zip(all_time_name_labels, scores_all_time):
-        label.config(text=name)
-    for label, (name, score) in zip(all_time_score_labels, scores_all_time):
-        label.config(text=score)
+    for i, (name, score) in enumerate(scores_all_time):
+        all_time_name_labels[i].config(text=f"{i+1}. {name}")
+        all_time_score_labels[i].config(text=score)
     for label in all_time_name_labels[len(scores_all_time):]:
         label.config(text="")
     for label in all_time_score_labels[len(scores_all_time):]:
@@ -101,25 +99,29 @@ all_time_name_labels, all_time_score_labels = [], []
 
 today_frame = tk.Frame(frame, bg="#000230")
 today_frame.pack(side="left", padx=40)
-tk.Label(today_frame, text="TOP DIARIOS", font=("Press Start 2P", 24), bg="#000230", fg="#fc4342").grid(row=0, column=0, columnspan=2, pady=10)
+tk.Label(today_frame, text="TOP DIARIOS", font=("Press Start 2P", 24), bg="#000230", fg="#fc4342").grid(row=0, column=0, columnspan=3, pady=10)
 
 for i in range(10):
+    rank_label = tk.Label(today_frame, text=f"{i+1}.", font=("Press Start 2P", 14), bg="#000230", fg="white", anchor="w")
     name_label = tk.Label(today_frame, text="", font=("Press Start 2P", 14), bg="#000230", fg="white", anchor="w")
     score_label = tk.Label(today_frame, text="", font=("Press Start 2P", 14), bg="#000230", fg="white", anchor="e")
-    name_label.grid(row=i + 1, column=0, sticky="w", padx=(10, 5), pady=2)
-    score_label.grid(row=i + 1, column=1, sticky="e", padx=(5, 10), pady=2)
+    rank_label.grid(row=i + 1, column=0, sticky="w", padx=(10, 5), pady=2)
+    name_label.grid(row=i + 1, column=1, sticky="w", padx=(5, 5), pady=2)
+    score_label.grid(row=i + 1, column=2, sticky="e", padx=(5, 10), pady=2)
     today_name_labels.append(name_label)
     today_score_labels.append(score_label)
 
 all_time_frame = tk.Frame(frame, bg="#000230")
 all_time_frame.pack(side="right", padx=40)
-tk.Label(all_time_frame, text="TOP GLOBAIS", font=("Press Start 2P", 24), bg="#000230", fg="#f03211").grid(row=0, column=0, columnspan=2, pady=10)
+tk.Label(all_time_frame, text="TOP GLOBAIS", font=("Press Start 2P", 24), bg="#000230", fg="#f03211").grid(row=0, column=0, columnspan=3, pady=10)
 
 for i in range(10):
+    rank_label = tk.Label(all_time_frame, text=f"{i+1}.", font=("Press Start 2P", 14), bg="#000230", fg="white", anchor="w")
     name_label = tk.Label(all_time_frame, text="", font=("Press Start 2P", 14), bg="#000230", fg="white", anchor="w")
     score_label = tk.Label(all_time_frame, text="", font=("Press Start 2P", 14), bg="#000230", fg="white", anchor="e")
-    name_label.grid(row=i + 1, column=0, sticky="w", padx=(10, 5), pady=2)
-    score_label.grid(row=i + 1, column=1, sticky="e", padx=(5, 10), pady=2)
+    rank_label.grid(row=i + 1, column=0, sticky="w", padx=(10, 5), pady=2)
+    name_label.grid(row=i + 1, column=1, sticky="w", padx=(5, 5), pady=2)
+    score_label.grid(row=i + 1, column=2, sticky="e", padx=(5, 10), pady=2)
     all_time_name_labels.append(name_label)
     all_time_score_labels.append(score_label)
 
